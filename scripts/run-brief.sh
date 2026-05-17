@@ -29,6 +29,19 @@ notify_fail() {
   fi
 }
 
+notify_success() {
+  osascript -e "display notification \"$DATE brief published\" with title \"Premarket Brief\"" 2>/dev/null || true
+  if [[ -f "$SLACK_URL_FILE" ]]; then
+    local url
+    url="$(cat "$SLACK_URL_FILE")"
+    local landing="https://seanwangys.github.io/us-premarket-brief/"
+    local archive="https://seanwangys.github.io/us-premarket-brief/archive/${DATE}.html"
+    curl -s -X POST -H 'Content-type: application/json' \
+      --data "{\"text\":\":white_check_mark: 美股盤前情報已更新 — ${DATE}\\n網頁：${landing}\\n本日存檔：${archive}\"}" \
+      "$url" >/dev/null || true
+  fi
+}
+
 mkdir -p "$(dirname "$LOG")"
 log "=== run-brief.sh start (date=$DATE) ==="
 
@@ -116,6 +129,6 @@ if ! git push -f origin report-data >>"$LOG" 2>&1; then
   exit 1
 fi
 
-# 5. Success notification
-osascript -e "display notification \"$DATE brief published\" with title \"Premarket Brief\"" 2>/dev/null || true
+# 5. Success notification (macOS + Slack; Slack only fires if webhook file exists)
+notify_success
 log "=== run-brief.sh done OK ==="

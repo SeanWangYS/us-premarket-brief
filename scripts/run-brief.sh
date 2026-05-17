@@ -62,10 +62,27 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 1
 fi
 
-log "starting claude -p"
-claude -p "$(cat routine-prompt.md)" \
+log "starting claude -p (typically 3-6 min; output is buffered until done — DO NOT KILL the process)"
+
+# Inject today's date into the prompt header so Claude uses the exact same
+# DATE the shell uses (otherwise a near-midnight run can disagree).
+PROMPT_HEADER="# Runtime context (injected by run-brief.sh)
+
+- Today's brief date: ${DATE}
+- Use this exact date for all file names (data/${DATE}.md, docs/archive/${DATE}.html)
+- Do NOT compute the date yourself; trust the shell.
+
+---
+
+"
+FULL_PROMPT="${PROMPT_HEADER}$(cat routine-prompt.md)"
+
+# Explicit tool allowlist (narrower than bypassPermissions): in headless mode
+# any tool not on this list is auto-denied. We keep --add-dir for filesystem
+# scope. Bash is required because skills internally shell out to curl.
+claude -p "$FULL_PROMPT" \
   --add-dir "$REPO" \
-  --permission-mode acceptEdits \
+  --allowedTools "Skill WebSearch Write Edit Read Bash" \
   >>"$LOG" 2>&1
 CLAUDE_EXIT=$?
 

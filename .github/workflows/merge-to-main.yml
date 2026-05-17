@@ -1,0 +1,32 @@
+name: Merge report-data to main
+
+on:
+  push:
+    branches: [report-data]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: merge-to-main
+  cancel-in-progress: false
+
+jobs:
+  ff-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fast-forward merge from report-data
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin report-data:report-data
+          git merge --ff-only report-data
+          git push origin main

@@ -8,7 +8,7 @@ Not a typical software project — this is an **automation** that publishes a da
 
 | Layer | File | What it does |
 |---|---|---|
-| Scheduler | `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` (**not in repo**) | macOS launchd fires `scripts/run-brief.sh` at MTWRF 20:30 Asia/Taipei |
+| Scheduler | `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` (live; not in repo) ← copied from `launchd/com.seanwang.us-premarket-brief.plist` (repo snapshot, not auto-synced) | macOS launchd fires `scripts/run-brief.sh` at MTWRF 20:30 Asia/Taipei |
 | Shell wrapper | `scripts/run-brief.sh` | Manages git ops + invokes `claude -p` headless + sends notifications |
 | Behavior spec | `routine-prompt.md` | The prompt that headless Claude reads; defines watchlist, data sources (moomoo skills + WebSearch), output format, fallback rules |
 
@@ -66,7 +66,7 @@ There are no tests, no lint, no build step. Validation is end-to-end: run the sc
 
 If something breaks unexpectedly, check these first — they're invisible to git:
 
-- `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` — scheduler
+- `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` — scheduler (recover from `launchd/` snapshot in repo; if it's been edited locally, the snapshot may be stale)
 - `~/Library/Logs/us-premarket-brief.log` — runtime log
 - `~/.config/us-premarket-brief/slack_webhook` — webhook URL (mode 600); if missing, Slack notifications silently skip
 - `~/.claude/skills/moomoo-news-search/`, `moomoo-stock-digest/`, `moomoo-comment-sentiment/` — the data-source skills the routine calls

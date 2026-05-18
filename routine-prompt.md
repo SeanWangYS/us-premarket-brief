@@ -47,20 +47,25 @@
 
 把 digest 給的 `bullish` / `bearish` / `neutral` 判斷 + 關鍵信號融入步驟 1 該檔的解讀。若沒有特別強的訊號，跳過本步驟。
 
-### 步驟 2 — 散戶情緒（呼叫 `moomoo-comment-sentiment` skill）
+### 步驟 2 — 情緒指標（WebSearch 公開來源）
 
-把整份 watchlist（10 檔 US ticker）當 portfolio 一次呼叫 `moomoo-comment-sentiment` skill：
-- `symbol_list`：`["BTC-USD", "NVDA", "COPX", "TSM", "TSLA", "PLTR", "AIQ", "QLD", "QQQ", "VOO"]`
-- `group_name`：`US Pre-Market Watchlist`
-- `lang`：`en`
-- `size_per_symbol`：`30`
+抓兩個指標，反映當日整體市場情緒（不再做 per-ticker 散戶比例）：
 
-從 skill 回傳結果取：
-- 整體 `bull / bear / neutral` 比例
-- Top 3 group-level 觀點
-- 哪幾檔最帶動情緒（多頭 / 空頭側）
+**A. AAII Sentiment Survey（週頻 Bull / Neutral / Bear %）**
+- 用 `WebSearch` 查：`"AAII Sentiment Survey latest week bullish bearish"`
+- 從第一條媒體報導（Seeking Alpha / MarketWatch / MSN / Yardeni / aaii.com 任一可信來源）取：
+  - **as-of 週末日期**（AAII 每週四下午公布上一個調查週期結果）
+  - **Bullish %**、**Neutral %**、**Bearish %**
+  - **Bull-Bear spread**（若有）
+- AAII 是週頻指標。週四前的 brief 會看到同一個數字；**直接寫，明確標 as-of 日期**
 
-若 skill 整體 fail：在報告該段註記「**散戶情緒：當前無社群數據**」，不要捏造。
+**B. VIX 恐慌指數（日頻）**
+- 用 `WebSearch` 查：`"VIX index today close CBOE"`
+- 從第一條報導取：**當前值（或最新收盤）**、**與前一日比較的點數 / 百分比**、（若有）**日內區間**
+- 解讀提示（一句話寫進報告）：< 15 = 平靜；15–20 = 中性；20–25 = 警戒；> 25 = 避險升溫
+
+若兩個來源**都**抓不到：該段註記「**情緒指標：當日無公開數據**」，不要捏造。
+單一來源失敗：把成功那個寫出，失敗那個註記「（{來源}：當日無公開數據）」。
 
 ### 步驟 3 — 宏觀經濟（WebSearch，過去 24 小時）
 
@@ -110,16 +115,12 @@
 - **0050**：依 TSM 與美股科技整體推導 → {方向}
 - **00631L**：方向同 `0050` 但 2x 放大；高波動日注意 reset 損耗
 
-## 散戶情緒（moomoo community snapshot）
+## 情緒指標
 
-- 整體 Bull / Bear / Neutral：{x}% / {y}% / {z}%（基於 {n} 則貼文）
-- 多頭由 {symbols} 帶動；空頭集中在 {symbols}
-- Top 觀點：
-  1. "…" · {時間}
-  2. "…" · {時間}
-  3. "…" · {時間}
+- **AAII（截至 {asof_date}）**：Bull {x}% / Neutral {y}% / Bear {z}%　·　Bull-Bear spread {±s}%
+- **VIX**：{value}（前日 {±point}, {±pct}%）—{一句解讀}
 
-（若 skill 失敗則本節改為：「當前無社群數據」）
+（若兩個來源都失敗則本節改為：「當日無公開數據」；單一來源失敗則該行改為「{來源}：當日無公開數據」）
 
 ## 宏觀經濟（過去 24 小時）
 
@@ -137,9 +138,10 @@
 
 ## Instrument（自我檢查；穩定後可移除此段）
 
-- **Skills loaded**：moomoo-news-search=✅/❌, moomoo-stock-digest=✅/❌, moomoo-comment-sentiment=✅/❌
+- **Skills loaded**：moomoo-news-search=✅/❌, moomoo-stock-digest=✅/❌
   - 載入判斷：若該 skill 在本次任務中可以被呼叫且回傳有效結構（即使 data 為空，只要 code=0 或回傳 disclaimer template，皆算 ✅），否則 ❌
 - **WebSearch**：✅/❌
+- **情緒指標來源**：AAII=✅/❌, VIX=✅/❌
 
 ## 免責聲明
 
@@ -208,7 +210,7 @@ HTML template（請把 `{DATE}`、`{NOW}`、`{BODY_HTML}` 替換為實際值，*
 ## 失敗 / Fallback 規則
 
 - 任何單一 ticker / 單一 step 失敗，**記到「今日失敗項目」段落並繼續**，不要中斷整個流程
-- 若 `moomoo-comment-sentiment` 整體失敗：散戶情緒段改為「當前無社群數據」
+- 若 AAII 與 VIX 兩個情緒指標來源**都**失敗：情緒指標段改為「當日無公開數據」（單一來源失敗則該行單獨註記）
 - 若所有 moomoo skills 都 ❌：仍要寫出 `data/{DATE}.md` 與 HTML（用「個股新聞抓取失敗」說明，並維持其他段落），讓 shell wrapper 能正常 commit
 - **絕對不要**：跑 git 指令、寫 `/tmp/*.py` 中介腳本、發出網路請求到 ai-news-search.moomoo.com 以外的服務（WebSearch 例外）
 
@@ -221,7 +223,7 @@ HTML template（請把 `{DATE}`、`{NOW}`、`{BODY_HTML}` 替換為實際值，*
 2. `./docs/index.html` 已存在（內容是今日報告）
 3. `./docs/archive/{DATE}.html` 已存在（與 index.html 內容相同）
 4. 報告 markdown 涵蓋 watchlist 全部 12 個項目（10 美股 + 2 台股 ETF 衍生）
-5. 「Instrument」段三個 skill 狀態都有標記
+5. 「Instrument」段兩個 skill + WebSearch + AAII / VIX 狀態都有標記
 6. 沒有跑過任何 `git` 指令
 
 若 1–5 任一不滿足：**重做該步驟**直到滿足；若無論如何寫不出檔（disk full / permission），exit 非零讓 shell wrapper 抓到失敗。

@@ -9,6 +9,7 @@ REPO="$HOME/us-premarket-brief"
 LOG="$HOME/Library/Logs/us-premarket-brief.log"
 SLACK_URL_FILE="$HOME/.config/us-premarket-brief/slack_webhook"
 DATE="$(date '+%Y-%m-%d')"
+RUN_TIME="$(date '+%H:%M')"
 
 log() {
   local ts
@@ -77,13 +78,20 @@ fi
 
 log "starting claude -p (typically 3-6 min; output is buffered until done — DO NOT KILL the process)"
 
-# Inject today's date into the prompt header so Claude uses the exact same
-# DATE the shell uses (otherwise a near-midnight run can disagree).
+# Inject today's date AND the shell-side run-start time into the prompt header.
+# - DATE pins file names to a single day even if the run crosses midnight.
+# - RUN_TIME pins the "generation time" the brief publishes; otherwise Claude
+#   guesses (and the previous prompt let it default to the scheduled 20:30,
+#   which lies about when the snapshot actually happened).
 PROMPT_HEADER="# Runtime context (injected by run-brief.sh)
 
 - Today's brief date: ${DATE}
+- Run start time: ${RUN_TIME} Asia/Taipei
 - Use this exact date for all file names (data/${DATE}.md, docs/archive/${DATE}.html)
-- Do NOT compute the date yourself; trust the shell.
+- Use this exact run-start time as the brief's generation timestamp (the
+  '生成時間' / '產生時間' fields). It reflects when the data was fetched,
+  not when the file was written.
+- Do NOT compute the date or time yourself; trust the shell.
 
 ---
 

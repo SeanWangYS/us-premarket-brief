@@ -1,7 +1,7 @@
 # 美股盤前情報整理員 — Routine Prompt（headless 版）
 
 > 由 `scripts/run-brief.sh` 透過 `claude -p` 觸發。
-> **報告日期 `{DATE}`**：使用本 prompt 最上方「Runtime context」段由 shell 注入的日期，**不要自行用 `date` 指令計算**（避免跨夜不一致）。
+> **報告日期 `{DATE}` 與生成時間 `{RUN_TIME}`**：兩者皆由 shell 在本 prompt 最上方「Runtime context」段注入，**請逐字使用，不要自行用 `date` 指令計算**（`{DATE}` 跨夜不一致、`{RUN_TIME}` 自行猜測會誤導讀者）。
 > 產出語言：**繁體中文**。不提供投資建議；只整理事實 + 影響方向 + 來源連結。
 >
 > **責任邊界**：本 prompt 只負責「抓資料 + 寫檔」。Git commit / push 由 `run-brief.sh` 處理，**不要**自己跑 git 指令。
@@ -24,7 +24,7 @@
 ### 步驟 1 — 個股新聞（呼叫 `moomoo-news-search` skill）
 
 對每個 US ticker，呼叫 `moomoo-news-search` skill：
-- `symbol`：對 `BTC-USD` 用 `Bitcoin`，其餘用 ticker 本身
+- `symbol`：對 `BTC-USD` 用 `Bitcoin`、對 `AIQ` 用 `Global X Artificial Intelligence ETF`（AIQ ticker 在 keyword search 會撈到同代碼的英國微型股，需用全名），其餘用 ticker 本身
 - `size`：`8`
 - `news_type`：`1`（News）
 - `lang`：`en`（資料源覆蓋廣；最後合成時翻成繁體中文）
@@ -95,7 +95,7 @@
 ```markdown
 # 美股盤前情報 — {DATE}
 
-> 生成時間：{HH:MM Asia/Taipei}
+> 生成時間：{RUN_TIME} Asia/Taipei
 > 本報告由自動化 routine 產生，僅整理公開資訊，**不構成投資建議**。
 
 ## TL;DR
@@ -152,7 +152,7 @@
 
 用 `Write` tool **逐字寫出兩份 HTML 檔案**（內容相同），不要產生 Python 中介腳本。
 
-HTML template（請把 `{DATE}`、`{NOW}`、`{BODY_HTML}` 替換為實際值，**其餘所有 CSS / 結構不要動**）：
+HTML template（請把 `{DATE}`、`{RUN_TIME}`、`{BODY_HTML}` 替換為實際值，**其餘所有 CSS / 結構不要動**）：
 
 ```html
 <!DOCTYPE html>
@@ -162,7 +162,7 @@ HTML template（請把 `{DATE}`、`{NOW}`、`{BODY_HTML}` 替換為實際值，*
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>美股盤前情報 — {DATE}</title>
   <style>
-    body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:15px;line-height:1.7;max-width:860px;margin:40px auto;padding:0 24px 60px}
+    body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:18px;line-height:1.7;max-width:860px;margin:40px auto;padding:0 24px 60px}
     h1{color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:10px}
     h2{color:#79c0ff;margin-top:32px}
     h3{color:#d2a8ff}
@@ -175,13 +175,13 @@ HTML template（請把 `{DATE}`、`{NOW}`、`{BODY_HTML}` 替換為實際值，*
     hr{border:none;border-top:1px solid #30363d;margin:24px 0}
     blockquote{border-left:3px solid #30363d;color:#8b949e;margin:16px 0;padding:4px 16px}
     code{background:#161b22;padding:2px 6px;border-radius:4px}
-    .meta{font-size:12px;color:#8b949e;margin-top:48px;border-top:1px solid #30363d;padding-top:12px}
+    .meta{font-size:14px;color:#8b949e;margin-top:48px;border-top:1px solid #30363d;padding-top:12px}
   </style>
 </head>
 <body>
 {BODY_HTML}
 <div class="meta">
-  產生時間：{NOW} (Asia/Taipei)　｜
+  產生時間：{RUN_TIME} (Asia/Taipei)　｜
   <a href="archive/{DATE}.html">本日存檔</a>　｜
   <a href="https://github.com/SeanWangYS/us-premarket-brief">GitHub</a>
 </div>

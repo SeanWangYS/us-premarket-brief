@@ -54,7 +54,7 @@ The shell also injects a `Runtime context` header in front of `routine-prompt.md
 
 | Goal | Command |
 |---|---|
-| Trigger a brief manually (publishes!) | `bash ~/Documents/Sean/project/us-premarket-brief/scripts/run-brief.sh` |
+| Trigger a brief manually (publishes!) | `bash ~/us-premarket-brief/scripts/run-brief.sh` |
 | Watch run progress | `tail -f ~/Library/Logs/us-premarket-brief.log` (note: `claude -p` buffers output until done; a "frozen" log at "starting claude -p" is normal for 8–10 min) |
 | Edit the brief's behavior | Edit `routine-prompt.md`, commit + push via PR; next run uses it |
 | Edit the trigger time | Edit `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` (not in repo) then `launchctl unload && launchctl load` it |

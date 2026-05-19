@@ -81,7 +81,13 @@ Live brief: **https://seanwangys.github.io/us-premarket-brief/**
 
 ## 移植到新 Mac 完整流程
 
-> 假設新 Mac 的使用者名稱為 `<NEW_USER>`，預期 repo 放在 `~/Documents/Sean/project/us-premarket-brief` (與舊 Mac 同；若不同要在多處改路徑，下面會註明)。
+> 假設新 Mac 的使用者名稱為 `<NEW_USER>`，預期 repo 放在 `~/us-premarket-brief`（**直接放在 Home 目錄下**；若放在其他位置要在多處改路徑，下面會註明）。
+
+> **為什麼一定要放在 Home，而不是 `~/Documents/` 之類的位置？**
+>
+> macOS（Catalina 以後，Sequoia 更嚴格）對 `~/Documents/`、`~/Desktop/`、`~/Downloads/` 套用 TCC（Transparency, Consent, and Control）權限保護。手動在 Terminal 跑 `bash run-brief.sh` 沒問題，因為 Terminal 早就被授權；但 **launchd 觸發的子行程沒有這些受保護資料夾的存取權**，會在 `cd` 進專案目錄時就失敗（log 會看到 `Operation not permitted`、exit code 126），整個 routine 完全不會跑。
+>
+> 解法有兩種：(a) 到 系統設定 → 隱私權與安全性 → 完整磁碟取用權限 加入 `/bin/bash`；(b) 把 repo 放在不受 TCC 保護的位置（例如 Home 目錄本身）。本專案選 (b)，因為免設定、跨 macOS 升級不會失效、移植到新 Mac 也不用每次重做授權。**不要為了「整齊」把這個 repo 移到 `~/Documents/` 底下，否則排程會壞**。
 
 ### Step 1 — 安裝 Claude CLI 並登入
 
@@ -122,8 +128,7 @@ ls ~/.claude/skills/
 
 ```bash
 # 假設 GitHub SSH key 已設好
-mkdir -p ~/Documents/Sean/project
-cd ~/Documents/Sean/project
+cd ~
 git clone git@github.com:SeanWangYS/us-premarket-brief.git
 cd us-premarket-brief
 ```
@@ -163,13 +168,13 @@ curl -X POST -H 'Content-type: application/json' \
 
 `scripts/run-brief.sh` 內：
 ```bash
-REPO="$HOME/Documents/Sean/project/us-premarket-brief"
+REPO="$HOME/us-premarket-brief"
 ```
-用 `$HOME` 已經 portable；除非您要把 repo 放在不同位置，否則**不用改**。
+用 `$HOME` 已經 portable；除非您要把 repo 放在不同位置（請見上方 TCC 說明，**強烈建議放在 Home 底下**），否則**不用改**。
 
 `Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` 內 hardcode 絕對路徑：
 ```xml
-<string>/Users/sean.wang/Documents/Sean/project/us-premarket-brief/scripts/run-brief.sh</string>
+<string>/Users/sean.wang/us-premarket-brief/scripts/run-brief.sh</string>
 ...
 <string>/Users/sean.wang/.local/bin:/opt/homebrew/bin:...</string>
 <string>/Users/sean.wang/Library/Logs/us-premarket-brief.launchd.log</string>
@@ -182,7 +187,7 @@ REPO="$HOME/Documents/Sean/project/us-premarket-brief"
 repo 內 `launchd/com.seanwang.us-premarket-brief.plist` 是上一台 Mac 的 plist snapshot，用來做 disaster recovery。直接拷貝到 LaunchAgents 目錄：
 
 ```bash
-cp ~/Documents/Sean/project/us-premarket-brief/launchd/com.seanwang.us-premarket-brief.plist \
+cp ~/us-premarket-brief/launchd/com.seanwang.us-premarket-brief.plist \
    ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist
 
 # 驗證 plist 語法
@@ -200,7 +205,7 @@ plutil -lint ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist
 ### Step 8 — 手動跑一次驗證
 
 ```bash
-bash ~/Documents/Sean/project/us-premarket-brief/scripts/run-brief.sh
+bash ~/us-premarket-brief/scripts/run-brief.sh
 ```
 
 預期耗時：8–10 分鐘 (claude headless 全程 buffer，不會 stream)。
@@ -238,10 +243,10 @@ launchctl list | grep premarket
 | 啟用排程 | `launchctl load ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` |
 | 停用排程 (保留檔案) | `launchctl unload ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` |
 | 確認排程已載入 | `launchctl list \| grep premarket` |
-| 手動觸發 | `bash ~/Documents/Sean/project/us-premarket-brief/scripts/run-brief.sh` |
+| 手動觸發 | `bash ~/us-premarket-brief/scripts/run-brief.sh` |
 | 看執行 log | `tail -100 ~/Library/Logs/us-premarket-brief.log` |
 | 看 launchd 自身 log | `tail -50 ~/Library/Logs/us-premarket-brief.launchd.log` |
-| 改 prompt | 編 `~/Documents/Sean/project/us-premarket-brief/routine-prompt.md`；commit + push 到 main 後其他 Mac `git pull` 即同步 |
+| 改 prompt | 編 `~/us-premarket-brief/routine-prompt.md`；commit + push 到 main 後其他 Mac `git pull` 即同步 |
 | 改觸發時間 | 編 plist 的 `StartCalendarInterval` 後 `launchctl unload && launchctl load` |
 | Slack webhook 換新 | 重寫 `~/.config/us-premarket-brief/slack_webhook` (mode 600) |
 

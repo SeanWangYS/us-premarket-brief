@@ -7,7 +7,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/sean.wang/Documents/Sean/project/us-premarket-brief/scripts/run-brief.sh</string>
+    <string>/Users/sean.wang/us-premarket-brief/scripts/run-brief.sh</string>
   </array>
 
   <key>StartCalendarInterval</key>
@@ -58,6 +58,6 @@
   <false/>
 
   <key>WorkingDirectory</key>
-  <string>/Users/sean.wang/Documents/Sean/project/us-premarket-brief</string>
+  <string>/Users/sean.wang/us-premarket-brief</string>
 </dict>
 </plist>

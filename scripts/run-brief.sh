@@ -5,7 +5,7 @@
 
 set -uo pipefail
 
-REPO="$HOME/Documents/Sean/project/us-premarket-brief"
+REPO="$HOME/us-premarket-brief"
 LOG="$HOME/Library/Logs/us-premarket-brief.log"
 SLACK_URL_FILE="$HOME/.config/us-premarket-brief/slack_webhook"
 DATE="$(date '+%Y-%m-%d')"

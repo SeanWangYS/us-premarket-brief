@@ -48,9 +48,28 @@ log "=== run-brief.sh start (date=$DATE) ==="
 
 cd "$REPO" || { notify_fail "cannot cd $REPO"; exit 1; }
 
-# 1. Sync with origin, make report-data branch follow main
-log "git fetch origin"
-git fetch origin main report-data >>"$LOG" 2>&1 || true
+# 1. Sync with origin, make report-data branch follow main.
+#    launchd often fires this the instant the Mac wakes, before Wi-Fi / SSH is
+#    ready, so the first fetch can fail with "ssh: connect to host ... port 22".
+#    We must NOT proceed on a stale origin/main: building report-data on an old
+#    base diverges it from main, and the ff-only merge action then fails
+#    silently (incident 2026-05-26/27 — two days of briefs never reached main).
+#    So retry with backoff, and ABORT HARD if fetch never succeeds. Never `|| true`.
+log "git fetch origin (with retry; network may be cold right after wake)"
+fetch_ok=0
+for attempt in 1 2 3 4 5; do
+  if git fetch origin main report-data >>"$LOG" 2>&1; then
+    fetch_ok=1
+    log "git fetch succeeded on attempt $attempt"
+    break
+  fi
+  log "git fetch attempt $attempt failed (network/SSH not ready?); retrying in 30s"
+  sleep 30
+done
+if [[ $fetch_ok -eq 0 ]]; then
+  notify_fail "git fetch origin failed after 5 attempts — aborting so we never build on a stale base"
+  exit 1
+fi
 
 if git show-ref --verify --quiet refs/heads/report-data; then
   git checkout report-data >>"$LOG" 2>&1

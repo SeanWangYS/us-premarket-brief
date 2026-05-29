@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: merge-to-main
@@ -28,5 +29,46 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin report-data:report-data
+          # ff-only is a deliberate guard: report-data is supposed to be
+          # exactly `main + the daily brief commit(s)`. If it can't fast-forward,
+          # the branches have diverged (e.g. run-brief.sh built on a stale base,
+          # or someone pushed to main directly) and a human must look — we do NOT
+          # auto-merge/clobber. The failure step below makes that loud.
           git merge --ff-only report-data
           git push origin main
+
+      # Previously a diverged report-data failed this workflow *silently* — the
+      # only symptom was "the website stopped updating" (incident 2026-05-26/27).
+      # Surface it loudly: open (or comment on) a GitHub issue so the owner is
+      # notified immediately. Uses the built-in GITHUB_TOKEN, no secret needed.
+      - name: Alert on merge failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="⚠️ report-data could not be fast-forwarded into main"
+          body=$(cat <<EOF
+          The \`merge-to-main\` workflow failed: \`git merge --ff-only report-data\` could not fast-forward, so **main was not updated and the published site is stale**.
+
+          This usually means report-data diverged from main — most often because \`scripts/run-brief.sh\` built the brief on a stale \`origin/main\` (a failed \`git fetch\`).
+
+          **How to recover** (locally):
+          \`\`\`
+          git fetch origin main report-data
+          git checkout -B fixup origin/main
+          # cherry-pick the missing daily brief commit(s) from report-data, then:
+          git push -f origin fixup:report-data   # re-triggers this workflow
+          \`\`\`
+
+          Failed run: $RUN_URL
+          EOF
+          )
+          existing=$(gh issue list --state open --label merge-failure --json number --jq '.[0].number' 2>/dev/null || true)
+          if [[ -n "${existing:-}" ]]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh label create merge-failure --color B60205 --description "merge-to-main workflow could not fast-forward" 2>/dev/null || true
+            gh issue create --title "$title" --body "$body" --label merge-failure
+          fi

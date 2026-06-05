@@ -5,6 +5,28 @@
 
 set -uo pipefail
 
+# Keep the Mac awake for the WHOLE run. launchd often fires this in the evening
+# while the laptop sits idle (lid open); without this, macOS idle-sleeps mid-run
+# and FREEZES the process for hours. Real incidents from the log:
+#   - 2026-06-04: claude started 22:23 but didn't finish/push until 10:02 next
+#     morning (frozen ~11.5h while asleep).
+#   - the git-fetch "sleep 30" backoff stretched to 55 min as the system
+#     suspended between attempts.
+# Re-exec ONCE under caffeinate so a single power assertion covers git + claude
+# + push end-to-end:  -i no idle system sleep, -m no disk idle sleep,
+# -s no system sleep on AC.  NOTE: caffeinate does NOT prevent lid-close
+# (clamshell) sleep, and can't help if the Mac is ALREADY asleep at 20:30 —
+# that half is handled by the pmset wake schedule (scripts/setup-wake-schedule.sh),
+# which wakes the Mac at 20:28 so launchd fires on time. Degrades gracefully if
+# caffeinate is missing.
+if [[ -z "${BRIEF_CAFFEINATED:-}" ]] && command -v caffeinate >/dev/null 2>&1; then
+  export BRIEF_CAFFEINATED=1
+  # Re-run via `bash "$0"` (not `caffeinate "$0"` directly) so this works
+  # whether launchd execs the file or someone runs `bash run-brief.sh`, and
+  # regardless of the file's +x bit. Shebang is env bash, so this is equivalent.
+  exec caffeinate -ims bash "$0" "$@"
+fi
+
 REPO="$HOME/us-premarket-brief"
 LOG="$HOME/Library/Logs/us-premarket-brief.log"
 SLACK_URL_FILE="$HOME/.config/us-premarket-brief/slack_webhook"

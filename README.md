@@ -72,170 +72,94 @@ flowchart TD
 
 ## 移植到新 Mac 完整流程
 
-> 假設新 Mac 的使用者名稱為 `<NEW_USER>`，預期 repo 放在 `~/us-premarket-brief`（**直接放在 Home 目錄下**；若放在其他位置要在多處改路徑，下面會註明）。
-
-> **為什麼一定要放在 Home，而不是 `~/Documents/` 之類的位置？**
+> repo 放 **`~/us-premarket-brief`（Home 根目錄）**。`~/Documents`、`~/Desktop`、`~/Downloads` 受 macOS TCC 權限保護，launchd 子行程對這些資料夾沒有存取權；放在 Home 可避開這層。**不要把 repo 移進 `~/Documents/`，否則排程會壞。**
 >
-> macOS（Catalina 以後，Sequoia 更嚴格）對 `~/Documents/`、`~/Desktop/`、`~/Downloads/` 套用 TCC（Transparency, Consent, and Control）權限保護。手動在 Terminal 跑 `bash run-brief.sh` 沒問題，因為 Terminal 早就被授權；但 **launchd 觸發的子行程沒有這些受保護資料夾的存取權**，會在 `cd` 進專案目錄時就失敗（log 會看到 `Operation not permitted`、exit code 126），整個 routine 完全不會跑。
->
-> 解法有兩種：(a) 到 系統設定 → 隱私權與安全性 → 完整磁碟取用權限 加入 `/bin/bash`；(b) 把 repo 放在不受 TCC 保護的位置（例如 Home 目錄本身）。本專案選 (b)，因為免設定、跨 macOS 升級不會失效、移植到新 Mac 也不用每次重做授權。**不要為了「整齊」把這個 repo 移到 `~/Documents/` 底下，否則排程會壞**。
+> 路徑示意一律用 `~` / `$HOME` / `<USER>`；請自行代換成你的家目錄。
 
-### Step 1 — 安裝 Claude CLI 並登入
+### 1. 安裝 Claude CLI 並登入
 
 ```bash
-# 1. 裝 Claude CLI (官方 install script)
-curl -fsSL https://claude.ai/install.sh | bash
-
-# 2. 確認 claude 在 PATH (預設裝到 ~/.local/bin)
-which claude
-# 應該回 /Users/<NEW_USER>/.local/bin/claude
-
-# 3. 登入 (互動式，會打開瀏覽器)
-claude
-# 進到 interactive session 後輸入 /login，跟著 OAuth 流程，登出後 exit
+curl -fsSL https://claude.ai/install.sh | bash   # 裝到 ~/.local/bin
+claude                                            # 進互動視窗後輸入 /login 跑 OAuth
 ```
 
-### Step 2 — 安裝 3 個 moomoo skills
+### 2. 安裝 3 個 moomoo skills（search-only）
 
 ```bash
-# Skills 放在 ~/.claude/skills/ 下，每個 skill 一個資料夾
 mkdir -p ~/.claude/skills
-
-# 從官方來源下載 (或從舊 Mac scp 過來)
-# 官方安裝指引：https://www.moomoo.com/skills/moomoo-install.md
-# 三個 skill：
-#   moomoo-news-search
-#   moomoo-stock-digest
-#   moomoo-comment-sentiment
-
-# 驗證
-ls ~/.claude/skills/
-# 應該看到三個資料夾，每個內含 SKILL.md
+# 放入 moomoo-news-search / moomoo-stock-digest / moomoo-comment-sentiment
+# 來源：https://www.moomoo.com/skills/moomoo-install.md（或從舊 Mac scp）
+ls ~/.claude/skills/        # 應見三個資料夾，各含 SKILL.md
 ```
+> Skills 純 markdown、只連 `ai-news-search.moomoo.com`、無認證 / Cookie。
 
-**Skills 的安全性**：純 markdown 指令、只連 `ai-news-search.moomoo.com`、無認證/Cookie、用 `--data-urlencode` 防注入。
-
-### Step 3 — clone repo
+### 3. Clone repo
 
 ```bash
-# 假設 GitHub SSH key 已設好
-cd ~
-git clone git@github.com:SeanWangYS/us-premarket-brief.git
-cd us-premarket-brief
+cd ~ && git clone git@github.com:SeanWangYS/us-premarket-brief.git
 ```
+> `routine-prompt.md` 已 track 在 git 內，clone 後即在。要本機改 prompt 又不想 commit，用 `git stash`，**別**把它加進 `.gitignore`。
 
-### Step 4 — 確認 `routine-prompt.md` 已存在
-
-`routine-prompt.md` 是給 Claude 讀的 routine 指令；目前**已 track 在 git 內**，所以 Step 3 的 `git clone` 應該已經把它帶下來：
-
-```bash
-ls routine-prompt.md && wc -l routine-prompt.md
-# 應該看到該檔案，~230 行左右
-```
-
-若您本機要對 prompt 做實驗性修改、不想 commit 上去，常用做法是 `git stash` 暫存自己改動，再 `git stash pop` 取回。**不要**重新加進 `.gitignore`，會被 `scripts/run-brief.sh` 的 sanity check 與後續同步搞混。
-
-### Step 5 — 建立 Slack webhook URL 檔
+### 4. Slack webhook（選用；沒設只是不發通知）
 
 ```bash
 mkdir -p ~/.config/us-premarket-brief
-# 把您的 webhook URL 寫進去 (從舊 Mac 拷貝或從 Slack admin 取得新的)
-echo 'https://hooks.slack.com/services/...' > ~/.config/us-premarket-brief/slack_webhook
+echo '<你的 Slack webhook URL>' > ~/.config/us-premarket-brief/slack_webhook
 chmod 600 ~/.config/us-premarket-brief/slack_webhook
-
-# 測試
-curl -X POST -H 'Content-type: application/json' \
-  --data '{"text":"webhook test from new mac"}' \
-  "$(cat ~/.config/us-premarket-brief/slack_webhook)"
-# Slack channel 應該收到訊息
 ```
+> 沒有 webhook：api.slack.com/apps → 建 app → Incoming Webhooks → On → 複製 URL。
 
-**若還沒有 webhook**：
-1. 開 https://api.slack.com/apps → Create New App → From scratch → name `Premarket Brief`
-2. Incoming Webhooks → On → Add New Webhook to Workspace → 選 channel
-3. 複製產生的 URL
-
-### Step 6 — 改 script + plist 內的 hardcoded 路徑 (若 username 與舊 Mac 不同)
-
-`scripts/run-brief.sh` 內：
-```bash
-REPO="$HOME/us-premarket-brief"
-```
-用 `$HOME` 已經 portable；除非您要把 repo 放在不同位置（請見上方 TCC 說明，**強烈建議放在 Home 底下**），否則**不用改**。
-
-`Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` 內 hardcode 絕對路徑：
-```xml
-<string>/Users/sean.wang/us-premarket-brief/scripts/run-brief.sh</string>
-...
-<string>/Users/sean.wang/.local/bin:/opt/homebrew/bin:...</string>
-<string>/Users/sean.wang/Library/Logs/us-premarket-brief.launchd.log</string>
-```
-
-把所有 `/Users/sean.wang/` 換成 `/Users/<NEW_USER>/` (launchd plist 不接受 `$HOME` 變數)。
-
-### Step 7 — 安裝 launchd plist
-
-repo 內 `launchd/com.seanwang.us-premarket-brief.plist` 是上一台 Mac 的 plist snapshot，用來做 disaster recovery。直接拷貝到 LaunchAgents 目錄：
+### 5. 安裝 launchd plist
 
 ```bash
-cp ~/us-premarket-brief/launchd/com.seanwang.us-premarket-brief.plist \
-   ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist
-
-# 驗證 plist 語法
-plutil -lint ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist
-# 應該回 OK
-
-# 若使用者名稱與舊 Mac 不同，回到 Step 6 把 plist 內的 /Users/sean.wang/ 全換成 /Users/<NEW_USER>/
-# 暫不 load，先手動測試 (Step 8)
+cp ~/us-premarket-brief/launchd/com.seanwang.us-premarket-brief.plist ~/Library/LaunchAgents/
+plutil -lint ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist   # 應回 OK
 ```
+> - **使用者名稱不同時**：把 plist 內所有 `/Users/<舊名>/…` 換成 `/Users/<新名>/…`（plist 不吃 `$HOME` 變數）。`run-brief.sh` 用 `$HOME`，不用改。
+> - launchd 只讀 `~/Library/LaunchAgents/` 那份，repo 內的是備份；改完 live 版要 `cp` 回 repo commit，下台 Mac 才同步得到。
 
-> **同步注意**：launchd 只讀 `~/Library/LaunchAgents/` 下的那份；repo 內的 plist 是純備份，不會自動同步。改觸發時間或 PATH 時，先改 `~/Library/LaunchAgents/...plist`、`launchctl unload && load` 確認生效後，再 `cp` 回 repo 一份 commit 上去，下台 Mac 才拿得到最新版。
->
-> **TODO 改進**：未來可把 plist 變成 template (例如 `launchd/com.seanwang.us-premarket-brief.plist.template`)，搭配 `scripts/install-plist.sh` 自動帶入 `$HOME` / `$USER`，免去 Step 6 手動改路徑。
-
-### Step 8 — 手動跑一次驗證
+### 6. 手動跑一次驗證（從 Terminal）
 
 ```bash
-bash ~/us-premarket-brief/scripts/run-brief.sh
+bash ~/us-premarket-brief/scripts/run-brief.sh   # 約 8–10 分鐘，全程 buffer
+```
+成功 = macOS / Slack 通知 + log 結尾 `=== run-brief.sh done OK ===` + Pages 1–3 分鐘內更新。失敗先看 log，再看 GitHub Actions。
+
+> Terminal 手動跑有完整權限，所以這步會過；但排程是 launchd 在**背景**跑，少了「醒著」與「檔案權限」兩件事 → 下一步補上。
+
+### 7. 兩個系統層設定（關鍵；不在 git 內，換 Mac / macOS 大版本升級要重做）
+
+**(a) 預先喚醒** — launchd 不會叫醒睡著的 Mac（否則 20:30 在睡就拖到醒來才補跑）：
+
+```bash
+bash ~/us-premarket-brief/scripts/setup-wake-schedule.sh   # sudo pmset repeat wake MTWRF 20:28
+pmset -g sched      # 確認出現 "Repeating power events"
 ```
 
-預期耗時：8–10 分鐘 (claude headless 全程 buffer，不會 stream)。
+**(b) 給 `claude` 完整磁碟取用權限（FDA）** — 否則排程會卡在權限彈窗：
 
-成功的話會：
-1. macOS 通知「<DATE> brief published」
-2. Slack channel 收到「✅ 美股盤前情報已更新 — <DATE> + URL」
-3. `~/Library/Logs/us-premarket-brief.log` 結尾出現 `=== run-brief.sh done OK ===`
-4. https://seanwangys.github.io/us-premarket-brief/ 在 1–3 分鐘內更新
+`claude -p` 啟動時會讀全域設定 `~/.claude.json`，裡面可能登記了放在 `~/Documents`（受 TCC 保護）的其他 Claude Code 專案；launchd 背景情境沒這權限 → 跳「想取用『文件』資料夾」彈窗、**卡住整個 run**，而對 launchd 程式按「允許」不會持久（macOS 已知限制）。治本是把 claude 執行檔加進 FDA：
 
-失敗排查：先看 log，再看 GitHub Actions tab。
+```bash
+readlink -f ~/.local/bin/claude    # 印出真正的執行檔路徑（含版本號）
+```
+系統設定 → 隱私權與安全性 → **完整磁碟取用權限** → 按 ＋ → 檔案視窗按 ⌘⇧G 貼上上面那條路徑 → 開啟 → 打開開關。
 
-### Step 9 — 啟用 launchd 排程
+> `~/.local/bin/claude` 是 symlink，FDA 不能加 symlink，要加它指向的「真正執行檔」（即 `readlink -f` 的輸出）。claude 自動更新換版本後若彈窗重現，用同指令找新路徑重加一次。
+
+### 8. 啟用排程
 
 ```bash
 launchctl load ~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist
-launchctl list | grep premarket
-# 應該看到一行 com.seanwang.us-premarket-brief
+launchctl list | grep premarket    # 應見 com.seanwang.us-premarket-brief
 ```
+下一個 MTWRF 20:30 自動觸發。
 
-下一個 MTWRF 20:30 即會自動觸發。
+### 9. GitHub 設定（只在 fork 新 repo 時做一次）
 
-### Step 9.5 — 設定預先喚醒排程 (保證準時，需 sudo)
-
-launchd 不會喚醒睡眠中的 Mac。設定一個每日 20:28 的喚醒事件，讓 Mac 在 20:30 觸發前就醒著（詳見故障排除 #6）：
-
-```bash
-bash ~/us-premarket-brief/scripts/setup-wake-schedule.sh
-# 會跑 sudo pmset repeat wakeorpoweron MTWRF 20:28:00，輸入密碼後即生效
-# 驗證：pmset -g sched 應出現 "Repeating power events" 區塊
-```
-
-> 這是**系統層設定，不在 git 內**。換新 Mac 或 macOS 大版本升級後要重跑一次。`run-brief.sh` 內的 caffeinate 只能在 job 已經開跑後阻止睡眠，無法把睡著的 Mac 叫醒 —— 那是這一步的工作。
-
-### Step 10 — GitHub repo 設定 (一次性，不用每台 Mac 重做；若 fork 新 repo 才要)
-
-1. **Settings → Actions → General → Workflow permissions**：選 `Read and write permissions` (讓 ff-merge workflow 能 push main)
-2. **Settings → Pages → Source**：選 `Deploy from a branch` + `main` + `/docs`
-3. **建立 `report-data` branch**：從 main 開分支 (本機 push 第一次時也會自動建立)
+- **Settings → Actions → General → Workflow permissions**：`Read and write permissions`（讓 ff-merge workflow 能 push main）
+- **Settings → Pages → Source**：`Deploy from a branch` + `main` + `/docs`
+- **`report-data` branch**：從 main 開，或本機第一次 push 時自動建立
 
 ---
 
@@ -326,6 +250,7 @@ launchd `StartCalendarInterval` **不會**喚醒睡眠中的 Mac：若 20:30 時
 |---|---|
 | `~/Library/LaunchAgents/com.seanwang.us-premarket-brief.plist` | 真正被 launchd 讀的 plist（從 repo 的 `launchd/` 拷過來） |
 | `pmset repeat` 喚醒排程（系統狀態，非檔案） | 由 `scripts/setup-wake-schedule.sh` 設定的每日 20:28 喚醒；`pmset -g sched` 可查、`sudo pmset repeat cancel` 可清 |
+| `claude` 完整磁碟取用權限 / FDA（系統設定，非檔案） | `claude` 執行檔加進 系統設定 → 隱私權與安全性 → 完整磁碟取用權限；否則 launchd 背景跑的 `claude -p` 會被「取用 Documents」彈窗卡住整個 run。claude 更新換版本後可能要重加（見移植流程 Step 7b） |
 | `~/Library/Logs/us-premarket-brief.log` | run-brief.sh + claude 整合 log |
 | `~/Library/Logs/us-premarket-brief.launchd.log` | launchd 自身 stdout/stderr |
 | `~/.config/us-premarket-brief/slack_webhook` | Slack Incoming Webhook URL (mode 600) |

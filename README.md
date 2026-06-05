@@ -19,35 +19,26 @@ Live brief: **https://seanwangys.github.io/us-premarket-brief/**
 
 ## 架構總覽
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ 本機 (macOS)                                                     │
-│                                                                  │
-│  launchd LaunchAgent  ── MTWRF 20:30 Asia/Taipei                 │
-│       │                                                          │
-│       ▼                                                          │
-│  scripts/run-brief.sh                                            │
-│       ├─ 切到 report-data branch、reset 為 origin/main            │
-│       ├─ 注入 $DATE 後呼叫 `claude -p` (headless)                  │
-│       │     └─ 用 moomoo skills + WebSearch 抓資料                 │
-│       │     └─ 寫 data/<DATE>.md + docs/index.html + archive       │
-│       ├─ git commit + force-push report-data                       │
-│       └─ 成功 / 失敗皆發 macOS notification + Slack webhook         │
-└──────────────────────────────────────────────────────────────────┘
-                              │ push report-data
-                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ GitHub                                                            │
-│                                                                   │
-│  .github/workflows/merge-to-main.yml                              │
-│       │ trigger: push to report-data                              │
-│       ▼                                                           │
-│  Action: ff-only merge report-data → main → push                  │
-│       │                                                           │
-│       ▼                                                           │
-│  GitHub Pages (source: main/docs/)                                │
-│       https://seanwangys.github.io/us-premarket-brief/            │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph LOCAL["本機 (macOS)"]
+        A["launchd LaunchAgent<br/>MTWRF 20:30 Asia/Taipei"]
+        B["scripts/run-brief.sh"]
+        C["切到 report-data branch<br/>reset 為 origin/main"]
+        D["注入 $DATE 後呼叫 claude -p（headless）<br/>· moomoo skills + WebSearch 抓資料<br/>· 寫 data/&lt;DATE&gt;.md + docs/index.html + archive"]
+        E["git commit + force-push report-data"]
+        F["成功／失敗皆發 macOS 通知 + Slack webhook"]
+        A --> B --> C --> D --> E --> F
+    end
+
+    subgraph GH["GitHub"]
+        G[".github/workflows/merge-to-main.yml<br/>trigger: push to report-data"]
+        H["Action：ff-only merge<br/>report-data → main → push"]
+        I["GitHub Pages（source: main/docs/）<br/>https://seanwangys.github.io/us-premarket-brief/"]
+        G --> H --> I
+    end
+
+    E -->|push report-data| G
 ```
 
 **兩個 branch 的設計動機**：本機只 push `report-data`，main 由 GitHub Actions 自動 ff-merge。這樣本機腳本永遠不直接動 main，符合「Claude/local 不直接 push production branch」的安全規則。

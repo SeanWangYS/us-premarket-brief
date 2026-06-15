@@ -142,9 +142,22 @@ FULL_PROMPT="${PROMPT_HEADER}$(cat routine-prompt.md)"
 # Explicit tool allowlist (narrower than bypassPermissions): in headless mode
 # any tool not on this list is auto-denied. We keep --add-dir for filesystem
 # scope. Bash is required because skills internally shell out to curl.
+#
+# --settings disables the `dotagents-skills` plugin for this run ONLY. That
+# plugin's marketplace is a `directory` source living under ~/Documents (a
+# macOS TCC-protected folder), so on startup claude loads its skills from
+# Documents and triggers a "claude wants to access Documents" GUI prompt. The
+# grant is keyed to the exact binary path (~/.local/share/claude/versions/X),
+# so EVERY auto-update lands at a new path and re-prompts — which silently
+# blocks the unattended run until someone clicks Allow. The brief needs none of
+# dotagents' skills (they're for CVE work); disabling it keeps the headless run
+# clear of ~/Documents entirely, so no version bump can ever re-trigger the
+# popup. We override only this one plugin (not --setting-sources, which would
+# also drop the user-scope moomoo skills the brief depends on).
 claude -p "$FULL_PROMPT" \
   --add-dir "$REPO" \
   --allowedTools "Skill WebSearch Write Edit Read Bash" \
+  --settings '{"enabledPlugins":{"dotagents-skills@dotagents":false}}' \
   >>"$LOG" 2>&1
 CLAUDE_EXIT=$?
 

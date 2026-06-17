@@ -143,21 +143,31 @@ FULL_PROMPT="${PROMPT_HEADER}$(cat routine-prompt.md)"
 # any tool not on this list is auto-denied. We keep --add-dir for filesystem
 # scope. Bash is required because skills internally shell out to curl.
 #
-# --settings disables the `dotagents-skills` plugin for this run ONLY. That
-# plugin's marketplace is a `directory` source living under ~/Documents (a
-# macOS TCC-protected folder), so on startup claude loads its skills from
-# Documents and triggers a "claude wants to access Documents" GUI prompt. The
+# --settings empties extraKnownMarketplaces so the headless run never touches
+# ~/Documents. The `dotagents` marketplace is a `directory` source living under
+# ~/Documents/Work/Project/dotagents (a macOS TCC-protected folder); on startup
+# claude SCANS every known marketplace's directory to enumerate it, and that
+# scan reads ~/Documents → a "claude wants to access Documents" GUI prompt. The
 # grant is keyed to the exact binary path (~/.local/share/claude/versions/X),
 # so EVERY auto-update lands at a new path and re-prompts — which silently
-# blocks the unattended run until someone clicks Allow. The brief needs none of
-# dotagents' skills (they're for CVE work); disabling it keeps the headless run
-# clear of ~/Documents entirely, so no version bump can ever re-trigger the
-# popup. We override only this one plugin (not --setting-sources, which would
-# also drop the user-scope moomoo skills the brief depends on).
+# blocks the unattended run until someone clicks Allow.
+#
+# A previous attempt disabled only the *plugin*
+# ({"enabledPlugins":{"dotagents-skills@dotagents":false}}) and the popup kept
+# firing: marketplace enumeration is independent of whether its plugins are
+# enabled, so disabling the plugin never stops the directory scan. The fix has
+# to drop the marketplace *registration*. --settings does a top-level key
+# REPLACE (not a deep merge), so "extraKnownMarketplaces":{} wipes all extra
+# marketplaces for this run — removing the ~/Documents directory source so no
+# scan, and no version bump, can re-trigger the popup. We also empty
+# enabledPlugins (the brief needs no plugins). The brief's moomoo data-source
+# skills live in ~/.claude/skills/ (user-scope standalone skills, NOT from any
+# marketplace), so they are unaffected; we keep the default --setting-sources so
+# they still load.
 claude -p "$FULL_PROMPT" \
   --add-dir "$REPO" \
   --allowedTools "Skill WebSearch Write Edit Read Bash" \
-  --settings '{"enabledPlugins":{"dotagents-skills@dotagents":false}}' \
+  --settings '{"extraKnownMarketplaces":{},"enabledPlugins":{}}' \
   >>"$LOG" 2>&1
 CLAUDE_EXIT=$?
 

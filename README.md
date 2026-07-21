@@ -8,12 +8,11 @@ Live brief: **https://seanwangys.github.io/us-premarket-brief/**
 
 ## 專案目的
 
-每日累積美股盤前情報、新聞解讀、社群情緒分析的習慣，建立金融領域知識基礎。覆蓋固定 watchlist：
+每日累積美股盤前情報、新聞解讀、市場情緒判讀的習慣，建立金融領域知識基礎。
 
-- **美股**：`BTC-USD`, `NVDA`, `COPX`, `TSM`, `TSLA`, `PLTR`, `AIQ`, `QLD`, `QQQ`, `VOO`
-- **台股 ETF 衍生分析**：`0050`, `00631L` (依 TSM + 美股科技基調推導)
+追蹤標的採固定 watchlist（美股個股 / ETF + 台股 ETF）。**實際清單唯一定義在 `routine-prompt.md` 的「觀察清單」段**——本文件刻意不重複列出，避免 watchlist 調整時兩處不同步。
 
-報告涵蓋：個股新聞 / 強訊號股 digest / 散戶情緒 / 宏觀經濟 / 政治地緣，產出格式為 markdown + HTML 雙版本。
+報告涵蓋：個股新聞 / 強訊號股 digest / 台股 ETF 新聞 / 情緒指標（AAII、VIX）/ AI 產業動態 / 宏觀經濟 / 政治地緣 / 每日財經名詞解析，產出格式為 markdown + HTML 雙版本。
 
 ---
 
@@ -51,8 +50,8 @@ flowchart TD
 |---|---|
 | **launchd** (macOS native) | 系統級排程，每週一至週五 20:30 觸發 |
 | **Claude CLI** (`claude -p`) | Headless 模式跑 routine prompt；用 `--allowedTools` 限定 Skill / WebSearch / Write / Edit / Read / Bash |
-| **moomoo skills** (3 個 search-only) | `moomoo-news-search`、`moomoo-stock-digest`、`moomoo-comment-sentiment`；純查詢、無下單、無 OpenD 依賴 |
-| **WebSearch** (Claude built-in) | 抓宏觀經濟與政治/地緣新聞 (Reuters / Bloomberg / CNBC / WSJ 優先) |
+| **moomoo skills** (search-only) | routine 使用 `moomoo-news-search`、`moomoo-stock-digest`；`moomoo-comment-sentiment` 已安裝但目前 routine 未呼叫。純查詢、無下單、無 OpenD 依賴。**注意：moomoo 無台股新聞覆蓋**，台股標的一律走 WebSearch（見 `routine-prompt.md` 步驟 3） |
+| **WebSearch** (Claude built-in) | 抓台股 ETF 新聞、情緒指標 (AAII / VIX)、AI 產業、宏觀經濟與政治/地緣新聞 (Reuters / Bloomberg / CNBC / WSJ / 台灣財經媒體優先) |
 | **GitHub Actions** | `merge-to-main.yml` 自動 ff-only 合併 report-data → main |
 | **GitHub Pages** | 從 `main/docs/` serve 靜態 HTML |
 | **Slack Incoming Webhook** | 成功 / 失敗通知 (本機讀 `~/.config/us-premarket-brief/slack_webhook`) |
@@ -197,19 +196,15 @@ launchctl list | grep premarket    # 應見 com.seanwang.us-premarket-brief
 
 只用 `--permission-mode acceptEdits` **不夠**，Skill / WebSearch 會被 silent deny。
 
-### 3. 散戶情緒 (`moomoo-comment-sentiment`) 報「當前無社群數據」
-
-不是 bug。moomoo `/stock_feed` 端點對美股 watchlist 多檔回傳空 data 是上游問題；routine 已 fallback 處理。
-
-### 4. GitHub Actions ff-merge 失敗
+### 3. GitHub Actions ff-merge 失敗
 
 理論上不該發生 (因為 `run-brief.sh` 每次都 `git reset --hard origin/main` 保證 report-data 永遠領先 main 至少 1 commit)。若發生：到 Actions tab 看錯誤 → 通常是 `report-data` 與 `main` 歷史分叉了 → 解法是把 `report-data` 砍掉重建。
 
-### 5. launchd 觸發時找不到 `claude`
+### 4. launchd 觸發時找不到 `claude`
 
 plist 內 `EnvironmentVariables.PATH` 沒包含 `~/.local/bin`。檢查並補上 (用絕對路徑：`/Users/<NEW_USER>/.local/bin`)。
 
-### 6. 排程觸發但 laptop 睡眠 / 閒置 → 跑很晚或跑到一半凍結
+### 5. 排程觸發但 laptop 睡眠 / 閒置 → 跑很晚或跑到一半凍結
 
 launchd `StartCalendarInterval` **不會**喚醒睡眠中的 Mac：若 20:30 時筆電在睡（或閒置即將睡），job 只會等 Mac 下次醒來才補跑（log 看過 20:30 的 job 拖到 23:23、甚至隔天早上才完成）。更糟的是若跑到一半 Mac 睡著，整個行程會被**凍結數小時**。
 
@@ -222,7 +217,7 @@ launchd `StartCalendarInterval` **不會**喚醒睡眠中的 Mac：若 20:30 時
 
 > 若 20:30 時你常**闔上筆電蓋**（而非開蓋閒置），caffeinate 無法阻止 clamshell 睡眠 → 要嘛保持開蓋、要嘛改用 `caffeinate -s` 並接電源、要嘛把整套搬到常開機器（雲端 / Mac mini / GitHub Actions）。
 
-### 7. 報告日期跨夜對不上
+### 6. 報告日期跨夜對不上
 
 `run-brief.sh` 已注入 `$DATE` 到 prompt header，Claude 應該用 shell 的日期。若 prompt 被改、移除了「請使用此日期，不要自行計算」段，可能會跨夜不同步。
 
@@ -240,6 +235,7 @@ launchd `StartCalendarInterval` **不會**喚醒睡眠中的 Mac：若 20:30 時
 | `launchd/com.seanwang.us-premarket-brief.plist` | launchd 排程 plist 的 snapshot；新 Mac 從這裡 cp 到 `~/Library/LaunchAgents/`。**不會自動同步**：改完 live plist 後手動 cp 回來再 commit |
 | `.github/workflows/merge-to-main.yml` | GH Actions ff-merge report-data → main |
 | `data/<YYYY-MM-DD>.md` | 每日 markdown 原稿 (自動產生) |
+| `data/glossary-index.md` | 「今日名詞解析」累積索引（`日期 \| 詞彙` 一行一筆，routine 自動 append，做 20 天內選詞去重） |
 | `docs/index.html` | 最新報告 (每日覆蓋) |
 | `docs/archive/<YYYY-MM-DD>.html` | 每日存檔 |
 | `README.md` | 本文件 |

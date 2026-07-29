@@ -6,3 +6,4 @@
 2026-07-23 | 自由現金流（Free Cash Flow）
 2026-07-24 | 算力租金（GPU/AI compute rental price）
 2026-07-27 | 循環融資（Circular Financing / Vendor Financing）
+2026-07-29 | 信用違約交換（Credit Default Swap, CDS）

@@ -7,3 +7,4 @@
 2026-07-24 | 算力租金（GPU/AI compute rental price）
 2026-07-27 | 循環融資（Circular Financing / Vendor Financing）
 2026-07-29 | 信用違約交換（Credit Default Swap, CDS）
+2026-08-03 | 剩餘履約義務（Remaining Performance Obligations, RPO）

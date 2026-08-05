@@ -9,3 +9,4 @@
 2026-07-29 | 信用違約交換（Credit Default Swap, CDS）
 2026-08-03 | 剩餘履約義務（Remaining Performance Obligations, RPO）
 2026-08-04 | 40 法則（Rule of 40）
+2026-08-05 | 股價營收比（Price-to-Sales Ratio, P/S）

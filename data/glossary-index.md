@@ -10,3 +10,4 @@
 2026-08-03 | 剩餘履約義務（Remaining Performance Obligations, RPO）
 2026-08-04 | 40 法則（Rule of 40）
 2026-08-05 | 股價營收比（Price-to-Sales Ratio, P/S）
+2026-08-06 | 預先出售通知（Form 144）

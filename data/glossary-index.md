@@ -16,3 +16,4 @@
 2026-08-11 | 特殊目的實體（Special Purpose Entity, SPE）
 2026-08-12 | 特殊應用積體電路（ASIC, Application-Specific Integrated Circuit）
 2026-08-13 | 軋空（Short Squeeze）
+2026-08-14 | 私募信貸（Private Credit）

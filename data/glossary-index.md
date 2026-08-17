@@ -17,3 +17,4 @@
 2026-08-12 | 特殊應用積體電路（ASIC, Application-Specific Integrated Circuit）
 2026-08-13 | 軋空（Short Squeeze）
 2026-08-14 | 私募信貸（Private Credit）
+2026-08-17 | 剩餘價值擔保（Residual Value Guarantee）

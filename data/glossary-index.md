@@ -20,3 +20,4 @@
 2026-08-17 | 剩餘價值擔保（Residual Value Guarantee）
 2026-08-18 | 成交量／未平倉量比（Volume/Open Interest Ratio, V/OI Ratio）
 2026-08-19 | 投降式賣壓（Capitulation）
+2026-08-20 | 隱含波動率（Implied Volatility）

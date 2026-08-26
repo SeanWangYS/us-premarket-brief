@@ -23,3 +23,4 @@
 2026-08-20 | 隱含波動率（Implied Volatility）
 2026-08-24 | Put/Call 比率（Put/Call Ratio）
 2026-08-25 | 信用評等（Credit Rating）
+2026-08-26 | 總持有成本（Total Cost of Ownership, TCO）

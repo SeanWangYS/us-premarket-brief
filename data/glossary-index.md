@@ -26,3 +26,4 @@
 2026-08-26 | 總持有成本（Total Cost of Ownership, TCO）
 2026-08-31 | 可轉換公司債（Convertible Bond, CB）
 2026-09-01 | 非投票權股權（Non-Voting Equity Securities）
+2026-09-02 | 留任獎金（Retention Package）

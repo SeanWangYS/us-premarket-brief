@@ -28,3 +28,4 @@
 2026-09-01 | 非投票權股權（Non-Voting Equity Securities）
 2026-09-02 | 留任獎金（Retention Package）
 2026-09-03 | 開放權重模型（Open-Weight Model）
+2026-09-07 | 指數成分股定期審核（Index Periodic Review / Rebalance）

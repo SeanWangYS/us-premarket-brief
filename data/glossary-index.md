@@ -31,3 +31,4 @@
 2026-09-07 | 指數成分股定期審核（Index Periodic Review / Rebalance）
 2026-09-09 | 時間價值衰減（Theta / Time Decay）
 2026-09-10 | 表外或有負債（Off-Balance-Sheet Contingent Liabilities）
+2026-09-11 | 三重魔力日（Triple Witching）

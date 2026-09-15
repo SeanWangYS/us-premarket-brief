@@ -32,3 +32,4 @@
 2026-09-09 | 時間價值衰減（Theta / Time Decay）
 2026-09-10 | 表外或有負債（Off-Balance-Sheet Contingent Liabilities）
 2026-09-11 | 三重魔力日（Triple Witching）
+2026-09-14 | 客戶集中度風險（Customer Concentration Risk）

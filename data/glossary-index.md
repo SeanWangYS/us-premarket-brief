@@ -40,3 +40,4 @@
 2026-09-22 | 蝶式價差（Butterfly Spread）
 2026-09-23 | 估值倍數壓縮（Multiple Compression）
 2026-09-24 | 標售尾差（Auction Tail）
+2026-09-30 | 股票回購（Share Buyback）

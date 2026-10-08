@@ -44,3 +44,4 @@
 2026-10-02 | 售後回租（Sale-Leaseback）
 2026-10-05 | ISM 服務業採購經理人指數（ISM Services PMI）
 2026-10-06 | 投資級債券（Investment-Grade Bond）
+2026-10-07 | FOMC 會議紀要（FOMC Minutes）

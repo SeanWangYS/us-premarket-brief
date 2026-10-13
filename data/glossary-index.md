@@ -47,3 +47,4 @@
 2026-10-07 | FOMC 會議紀要（FOMC Minutes）
 2026-10-08 | 信用違約交換（Credit Default Swap, CDS）
 2026-10-12 | 年化營收運行率（Annualized Revenue Run Rate）
+2026-10-13 | 4F² 記憶體單元（4F² Cell）

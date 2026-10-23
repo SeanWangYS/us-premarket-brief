@@ -49,3 +49,4 @@
 2026-10-12 | 年化營收運行率（Annualized Revenue Run Rate）
 2026-10-13 | 4F² 記憶體單元（4F² Cell）
 2026-10-22 | 特別委員會（Special Committee）
+2026-10-23 | FC-BGA 載板（Flip-Chip Ball Grid Array Substrate）
